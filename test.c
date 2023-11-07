@@ -9,7 +9,14 @@
 #include <dirent.h>
 #include <sys/time.h>
 
-#define REPEAT 10
+#define REPEAT 1
+const number TESTS[][2] = {
+    {10, 29},
+    {100, 541},
+    {1000, 7919},
+    {10000, 104729},
+    {100000, 1299709},
+};
 
 void __attribute__((__noreturn__)) die(const char* format, ...) {
     va_list args;
@@ -49,21 +56,19 @@ void test(const char* name) {
         }
     }
     static struct timeval start, end;
-    static number out = 0, outtemp = 0;
+    static number out = 0;
     printf("* %s  \n    | Number | Time (ms) |\n    | --- | --- |\n", name);
-    for (number size = 10; size < 100000; size *= 10) {
+    for (uint_fast64_t i = 0; i < sizeof(TESTS) / sizeof(TESTS[0]); ++i) {
         gettimeofday(&start, NULL);
         for (uint_fast64_t j = 0; j < REPEAT; ++j) {
-            outtemp = foo(size);
-            if (j == 0)
-                out = outtemp;
-            else if (out != outtemp)
-                die("Inconsistent output %f != %f for %s\n", out, outtemp, name);
+            out = foo(TESTS[i][0]);
+            if (out != TESTS[i][1])
+                die("Output %lu is not expected %lu for %s\n", out, TESTS[i][1], name);
         }
         gettimeofday(&end, NULL);
-        double time = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
+        double time = (end.tv_sec - start.tv_sec) * 1000.f + (end.tv_usec - start.tv_usec) / 1000.f;
         time /= REPEAT;
-        printf("    | %lu | %f |\n", size, time);
+        printf("    | %lu | %f |\n", TESTS[i][0], time);
     }
     dlclose(lib);
 }
@@ -73,7 +78,7 @@ int main(int argc, char *argv[]) {
         printf("Usage: %s [all|<name>] ...<names>\n", argv[0]);
         return 1;
     }
-    if (argc == 2 && strcmp(argv[0], "all")) {
+    if (argc == 2 && strcmp(argv[0], "all") == 0) {
         DIR *dir;
         struct dirent *ent;
         if ((dir = opendir("./src/")) == NULL)
